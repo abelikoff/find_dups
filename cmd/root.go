@@ -10,6 +10,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var Verbose bool
+var UseCache bool
+
 // base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "find_dups <directory>",
@@ -60,7 +63,6 @@ func init() {
 
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.find_dups.yaml)")
 
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	//rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.PersistentFlags().BoolVarP(&UseCache, "cache", "C", false, "enable caching")
+	rootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
 }
