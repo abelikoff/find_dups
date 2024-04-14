@@ -27,9 +27,9 @@ type FileInfo struct {
 var filesBySig = make(map[string]*list.List) // sig+size -> list of files
 var filesBySize = make(map[int64]*list.List) // size -> list of files
 
-func getSignature(path string) (string, error) {
+func getSignature(file_info FileInfo) (string, error) {
 	if UseCache {
-		entry, err := getCachedFileInfo(path)
+		entry, err := getCachedFileInfo(&file_info)
 
 		if err == nil {
 			if entry != nil {
@@ -40,7 +40,7 @@ func getSignature(path string) (string, error) {
 		}
 	}
 
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(file_info.Path)
 
 	if err != nil {
 		log.Print(err)
@@ -52,7 +52,7 @@ func getSignature(path string) (string, error) {
 
 	if UseCache {
 		var entry = CachedEntry{Signature: signature}
-		cacheFileInfo(path, &entry)
+		cacheFileInfo(&file_info, &entry)
 	}
 
 	return signature, nil
@@ -98,7 +98,7 @@ func groupBySignature() {
 
 		for e := listOfFiles.Front(); e != nil; e = e.Next() {
 			if file_info, ok := e.Value.(FileInfo); ok {
-				signature, err := getSignature(file_info.Path)
+				signature, err := getSignature(file_info)
 
 				if err != nil {
 					log.Print(err)
