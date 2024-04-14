@@ -26,6 +26,18 @@ var filesBySig = make(map[string]*list.List) // sig+size -> list of files
 var filesBySize = make(map[int64]*list.List) // size -> list of files
 
 func getSignature(path string) (string, error) {
+	if UseCache {
+		entry, err := getCachedFileInfo(path)
+
+		if err == nil {
+			if entry != nil {
+				return entry.Signature, nil
+			}
+		} else {
+			log.Print(err)
+		}
+	}
+
 	data, err := os.ReadFile(path)
 
 	if err != nil {
@@ -34,7 +46,14 @@ func getSignature(path string) (string, error) {
 	}
 
 	digest := sha1.Sum(data)
-	return hex.EncodeToString(digest[:]), nil
+	signature := hex.EncodeToString(digest[:])
+
+	if UseCache {
+		var entry = CachedEntry{Signature: signature}
+		cacheFileInfo(path, &entry)
+	}
+
+	return signature, nil
 }
 
 func groupBySize(top_dir string) error {
