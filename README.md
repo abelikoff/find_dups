@@ -26,3 +26,11 @@ results upon repeated use.
 ```shell
     find_dups -C ~/mydir
 ```
+
+### Cache clean-up
+
+Remove all cache entries older than 3 months:
+
+```shell
+    find_dups cleanCache
+```

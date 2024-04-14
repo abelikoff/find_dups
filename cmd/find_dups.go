@@ -11,7 +11,6 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -36,14 +35,14 @@ func getSignature(file_info FileInfo) (string, error) {
 				return entry.Signature, nil
 			}
 		} else {
-			log.Print(err)
+			logger.Error().Msgf("cache fetch error: %e", err)
 		}
 	}
 
 	data, err := os.ReadFile(file_info.Path)
 
 	if err != nil {
-		log.Print(err)
+		logger.Error().Msgf("file read error: %e", err)
 		return "", err
 	}
 
@@ -64,7 +63,7 @@ func groupBySize(top_dir string) error {
 
 func groupFileBySizeCallback(path string, info os.FileInfo, err error) error {
 	if err != nil {
-		log.Print(err)
+		logger.Error().Msgf("traversal error: %e", err)
 		return nil
 	}
 
@@ -101,7 +100,7 @@ func groupBySignature() {
 				signature, err := getSignature(file_info)
 
 				if err != nil {
-					log.Print(err)
+					logger.Error().Msgf("signature error: %e", err)
 					continue
 				}
 

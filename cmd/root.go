@@ -6,7 +6,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -58,7 +57,7 @@ File signatures can be cached for faster operation.
 		err := groupBySize(args[0])
 
 		if err != nil {
-			log.Fatal(err)
+			logger.Fatal().Msgf("ERROR: %e", err)
 		}
 
 		logger.Debug().Msg("grouping files by signature...")

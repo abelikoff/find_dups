@@ -7,11 +7,12 @@
 // For each file (of those already similar by size) we store signature as well as the file size.
 // When fetching the cached value, we make sure the size hasn't changed.
 //
-// We also store the cache write timespamp for cache cleanups (currently not implemented).
+// We also store the cache write timespamp for cache cleanups ('clean-cache' command).
 
 package cmd
 
 import (
+	"container/list"
 	"errors"
 	"fmt"
 	"os"
@@ -22,7 +23,7 @@ import (
 	"github.com/graygnuorg/go-gdbm"
 )
 
-// const ExpirationHours float64 = 24 * 30
+const ExpirationHours float64 = 24 * 90
 
 var num_cache_calls, num_cache_hits, num_cache_mismatches, num_cache_writes int // cache statistics
 
@@ -134,6 +135,74 @@ func cacheFileInfo(info *FileInfo, data *CachedEntry) error {
 	}
 
 	num_cache_writes++
+	return nil
+}
+
+func cleanCache() error {
+	if db == nil {
+		if err := openCache(); err != nil {
+			return fmt.Errorf("ERROR: failed to open cache file: %e", err)
+		}
+	}
+
+	var to_be_deleted list.List
+	var num_total, num_deleted int
+
+	// first pass - collect the candidates
+
+	next := db.Iterator()
+	var key []byte
+	var err error
+
+	for key, err = next(); err == nil; key, err = next() {
+		value, err := db.Fetch(key)
+		delete_it := true
+
+		if err != nil {
+			continue
+		}
+
+		num_total++
+		var serialized string = string(value)
+		tokens := strings.Split(serialized, "|")
+
+		if len(tokens) != 3 {
+			logger.Error().Msgf("ERROR: malformed cache entry: '%s' -> '%s'", string(key), serialized)
+		} else {
+			save_time, err := time.Parse(time.RFC3339, tokens[2])
+
+			if err != nil {
+				logger.Error().Msgf("ERROR: malformed cache time for '%s': '%s': %e", string(key), tokens[2], err)
+			} else {
+
+				now := time.Now()
+				time_diff := now.Sub(save_time)
+
+				if time_diff.Hours() < ExpirationHours {
+					delete_it = false
+				}
+			}
+		}
+
+		if delete_it {
+			to_be_deleted.PushBack(key)
+		}
+	}
+
+	// second pass - delete the candidates
+
+	for e := to_be_deleted.Front(); e != nil; e = e.Next() {
+		if key, ok := e.Value.([]byte); ok {
+			if VerbosityLevel > 1 {
+				logger.Debug().Msgf("cache delete: '%s'", string(key))
+			}
+
+			db.Delete(key)
+			num_deleted++
+		}
+	}
+
+	logger.Debug().Msgf("cache cleanup: %d/%d entries deleted", num_deleted, num_total)
 	return nil
 }
 
