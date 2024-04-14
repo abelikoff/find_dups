@@ -6,12 +6,16 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 )
 
-var Verbose bool
+var logger zerolog.Logger
+var VerbosityLevel int
 var UseCache bool
+var CacheFile string
 
 // base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -40,14 +44,26 @@ File signatures can be cached for faster operation.
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
+		VerbosityLevel, _ = cmd.Flags().GetCount("verbose")
+
+		if VerbosityLevel > 0 {
+			zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		} else {
+			zerolog.SetGlobalLevel(zerolog.InfoLevel)
+		}
+
+		logger.Debug().Msg("grouping files by size...")
 		err := groupBySize(args[0])
 
 		if err != nil {
 			log.Fatal(err)
 		}
 
+		logger.Debug().Msg("grouping files by signature...")
 		groupBySignature()
+		logger.Debug().Msg("generating report...")
 		showDuplicates()
+		outputCacheStats()
 	},
 }
 
@@ -67,6 +83,13 @@ func init() {
 
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.find_dups.yaml)")
 
+	logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339}).
+		Level(zerolog.TraceLevel).
+		With().
+		Timestamp().
+		Logger()
+
 	rootCmd.PersistentFlags().BoolVarP(&UseCache, "cache", "C", false, "enable caching")
-	rootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
+	rootCmd.Flags().StringVarP(&CacheFile, "cache_file", "", "", "cache file to use")
+	rootCmd.PersistentFlags().CountP("verbose", "v", "verbosity level")
 }

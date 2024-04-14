@@ -16,6 +16,8 @@ import (
 
 const ExpirationHours float64 = 24
 
+var num_cache_calls, num_cache_hits, num_cache_expires, num_cache_writes int // cache statistics
+
 type CachedEntry struct {
 	Signature string
 	//Size      int64
@@ -24,11 +26,13 @@ type CachedEntry struct {
 var db *gdbm.Database
 
 func openCache() error {
-	home, _ := os.UserHomeDir()
-	cache_file := home + string(os.PathSeparator) + ".find_dups.cache"
+	if CacheFile == "" {
+		home, _ := os.UserHomeDir()
+		CacheFile = home + string(os.PathSeparator) + ".find_dups.cache"
+	}
 
 	var err error
-	db, err = gdbm.Open(cache_file, gdbm.ModeWrcreat)
+	db, err = gdbm.Open(CacheFile, gdbm.ModeWrcreat)
 
 	if err != nil {
 		return fmt.Errorf("ERROR: failed to open cache file: %e", err)
@@ -38,6 +42,7 @@ func openCache() error {
 }
 
 func getCachedFileInfo(path string) (*CachedEntry, error) {
+	num_cache_calls++
 
 	if db == nil {
 		if err := openCache(); err != nil {
@@ -78,6 +83,7 @@ func getCachedFileInfo(path string) (*CachedEntry, error) {
 	time_diff := now.Sub(save_time)
 
 	if time_diff.Hours() >= ExpirationHours {
+		num_cache_expires++
 		db.Delete([]byte(path))
 		return nil, nil
 	}
@@ -90,14 +96,21 @@ func getCachedFileInfo(path string) (*CachedEntry, error) {
 		return nil, fmt.Errorf("ERROR: malformed cached size for '%s': '%s': %e", path, tokens[2], err)
 	}*/
 
-	fmt.Printf("*** cache hit: '%s' -> '%s'\n", path, entry.Signature)
+	if VerbosityLevel > 1 {
+		logger.Debug().Msgf("cache hit: '%s' -> '%s'", path, entry.Signature)
+	}
+
+	num_cache_hits++
 	return &entry, nil
 }
 
 func cacheFileInfo(path string, data *CachedEntry) error {
 	//serialized := fmt.Sprintf("%s|%d|%s", data.Signature, data.Size, time.Now().Format(time.RFC3339))
 	serialized := fmt.Sprintf("%s|%s", data.Signature, time.Now().Format(time.RFC3339))
-	fmt.Printf("*** cache write: '%s' -> '%s'\n", path, serialized)
+
+	if VerbosityLevel > 1 {
+		logger.Debug().Msgf("cache write: '%s' -> '%s'", path, serialized)
+	}
 
 	err := db.Store([]byte(path), []byte(serialized), true)
 
@@ -105,5 +118,22 @@ func cacheFileInfo(path string, data *CachedEntry) error {
 		return fmt.Errorf("ERROR: failed to cache '%s': %e", path, err)
 	}
 
+	num_cache_writes++
 	return nil
+}
+
+func outputCacheStats() {
+	if VerbosityLevel < 1 {
+		return
+	}
+
+	var hit_ratio float32 = 0.0
+
+	if num_cache_hits > 0 {
+		hit_ratio = float32(num_cache_hits) / float32(num_cache_calls) * 100
+	}
+
+	logger.Debug().Msgf("cache stats: %d total, %d hits (%.1f%% hit ratio), %d misses (%d expired), %d writes",
+		num_cache_calls, num_cache_hits, hit_ratio, num_cache_calls-num_cache_hits,
+		num_cache_expires, num_cache_writes)
 }
