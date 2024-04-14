@@ -15,10 +15,14 @@ var UseCache bool
 
 // base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "find_dups <directory>",
+	Use:   "find_dups  <directory> ",
 	Short: "List all identical files underneath the directory",
-	Long: `Files are considered	identical if they have the same size
-and SHA-1 signature.`,
+	Long: `find_dups lists all identical files underneath the directory.
+
+Files are considered identical if they have the same size and SHA-1 signature.
+File signatures can be cached for faster operation.
+
+`,
 
 	Args: func(cmd *cobra.Command, args []string) error {
 		// Optionally run one of the validators provided by cobra
