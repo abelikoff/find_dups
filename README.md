@@ -32,5 +32,5 @@ results upon repeated use.
 Remove all cache entries older than 3 months:
 
 ```shell
-    find_dups cleanCache
+    find_dups clean-cache
 ```
