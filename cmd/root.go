@@ -1,5 +1,7 @@
 // Copyright © 2024 Alexander L. Belikoff (alexander@belikoff.net)
 
+// http://github.com/abelikoff/find_dups
+
 package cmd
 
 import (
@@ -90,6 +92,7 @@ func init() {
 		Logger()
 
 	rootCmd.PersistentFlags().BoolVarP(&UseCache, "cache", "C", false, "enable caching")
-	rootCmd.Flags().StringVarP(&CacheFile, "cache_file", "", "", "cache file to use")
+	rootCmd.Flags().StringVarP(&CacheFile, "cache_file", "", "",
+		"cache file to use (default: ~/.find_dups.cache)")
 	rootCmd.PersistentFlags().CountP("verbose", "v", "verbosity level")
 }

@@ -1,5 +1,7 @@
 // Copyright © 2024 Alexander L. Belikoff (alexander@belikoff.net)
 
+// http://github.com/abelikoff/find_dups
+
 // Caching facility for find_dups.
 
 package cmd
