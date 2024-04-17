@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -12,20 +13,29 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// cleanCacheCmd represents the cleanCache command
-var cleanCacheCmd = &cobra.Command{
-	Use:   "clean-cache",
-	Short: "Clean the cache file",
-	Long: `Clean entries from the cache file that have been created more than
-	3 months ago`,
+// updateCacheCmd represents the update-cache command
+
+var updateCacheCmd = &cobra.Command{
+	Use:   "update-cache",
+	Short: "Update the cache file",
+	Long: `Caches signatures for all files underneath a given directory. Also cleans entries from the cache
+file that have been created more than 3 months ago`,
 	Args: func(cmd *cobra.Command, args []string) error {
-		if err := cobra.ExactArgs(0)(cmd, args); err != nil {
+		if err := cobra.ExactArgs(1)(cmd, args); err != nil {
 			return err
+		}
+
+		path := args[0]
+		fileInfo, err := os.Stat(path)
+
+		if err != nil || !fileInfo.IsDir() {
+			return fmt.Errorf("not a directory: %s", path)
 		}
 
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
+		UseCache = true
 		VerbosityLevel, _ = cmd.Flags().GetCount("verbose")
 
 		if VerbosityLevel > 0 {
@@ -34,7 +44,7 @@ var cleanCacheCmd = &cobra.Command{
 			zerolog.SetGlobalLevel(zerolog.InfoLevel)
 		}
 
-		err := cleanCache()
+		err := updateCache(args[0])
 
 		if err != nil {
 			logger.Fatal().Msgf("ERROR: %e", err)
@@ -43,7 +53,7 @@ var cleanCacheCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(cleanCacheCmd)
+	rootCmd.AddCommand(updateCacheCmd)
 
 	// Here you will define your flags and configuration settings.
 
@@ -61,7 +71,7 @@ func init() {
 		Timestamp().
 		Logger()
 
-	cleanCacheCmd.Flags().StringVarP(&CacheFile, "cache_file", "", "",
+	updateCacheCmd.Flags().StringVarP(&CacheFile, "cache_file", "", "",
 		"cache file to use (default: ~/.find_dups.cache)")
 
 }

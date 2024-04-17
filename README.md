@@ -18,19 +18,21 @@ Find all identical files in a given directory:
     find_dups ~/mydir
 ```
 
-### Use caching
+### Caching
 
 `find_dups` can cache signatures for files it processes to facilitate faster
-results upon repeated use.
+results upon repeated use. Cache can be built in advance (which is slow as it will
+calculate signatures for all files in the directory) on on the fly (which will only
+cache signatures for the files for which they are computed)
+
+To rebuild the cache (_slow!_):
+
+```shell
+    find_dups update-cache
+```
+
+To use cached signatures:
 
 ```shell
     find_dups -C ~/mydir
-```
-
-### Cache clean-up
-
-Remove all cache entries older than 3 months:
-
-```shell
-    find_dups clean-cache
 ```

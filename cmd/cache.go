@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -25,7 +26,7 @@ import (
 
 const ExpirationHours float64 = 24 * 90
 
-var num_cache_calls, num_cache_hits, num_cache_mismatches, num_cache_writes int // cache statistics
+var num_cache_calls, num_cache_hits, num_cache_mismatches, num_cache_writes, num_inserted int // cache statistics
 
 type CachedEntry struct {
 	Signature string
@@ -138,13 +139,49 @@ func cacheFileInfo(info *FileInfo, data *CachedEntry) error {
 	return nil
 }
 
-func cleanCache() error {
+func updateCache(top_dir string) error {
 	if db == nil {
 		if err := openCache(); err != nil {
 			return fmt.Errorf("ERROR: failed to open cache file: %e", err)
 		}
 	}
 
+	err := filepath.Walk(top_dir, updateFileInCacheCallback)
+
+	if err != nil {
+		return err
+	}
+
+	return cleanCache()
+}
+
+func updateFileInCacheCallback(path string, info os.FileInfo, err error) error {
+	if err != nil {
+		logger.Error().Msgf("traversal error: %e", err)
+		return nil
+	}
+
+	if info.IsDir() {
+		return nil
+	}
+
+	if (info.Mode() & os.ModeSymlink) != 0 {
+		return nil
+	}
+
+	size := info.Size()
+	file_info := FileInfo{path, size, info.ModTime()}
+	_, err = getSignature(file_info, true)
+	num_inserted++
+
+	if err != nil {
+		logger.Error().Msgf("signature error: %e", err)
+	}
+
+	return nil
+}
+
+func cleanCache() error {
 	var to_be_deleted list.List
 	var num_total, num_deleted int
 
@@ -202,7 +239,7 @@ func cleanCache() error {
 		}
 	}
 
-	logger.Debug().Msgf("cache cleanup: %d/%d entries deleted", num_deleted, num_total)
+	logger.Debug().Msgf("cache update: %d added, %d deleted", num_inserted, num_deleted)
 	return nil
 }
 

@@ -26,8 +26,8 @@ type FileInfo struct {
 var filesBySig = make(map[string]*list.List) // sig+size -> list of files
 var filesBySize = make(map[int64]*list.List) // size -> list of files
 
-func getSignature(file_info FileInfo) (string, error) {
-	if UseCache {
+func getSignature(file_info FileInfo, check_cache bool) (string, error) {
+	if UseCache && check_cache {
 		entry, err := getCachedFileInfo(&file_info)
 
 		if err == nil {
@@ -97,7 +97,7 @@ func groupBySignature() {
 
 		for e := listOfFiles.Front(); e != nil; e = e.Next() {
 			if file_info, ok := e.Value.(FileInfo); ok {
-				signature, err := getSignature(file_info)
+				signature, err := getSignature(file_info, true)
 
 				if err != nil {
 					logger.Error().Msgf("signature error: %e", err)
