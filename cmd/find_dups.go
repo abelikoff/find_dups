@@ -23,11 +23,16 @@ type FileInfo struct {
 	Mtime time.Time
 }
 
+type CachePolicy struct {
+	ReadFromCache bool
+	WriteToCache  bool
+}
+
 var filesBySig = make(map[string]*list.List) // sig+size -> list of files
 var filesBySize = make(map[int64]*list.List) // size -> list of files
 
-func getSignature(file_info FileInfo, check_cache bool) (string, error) {
-	if UseCache && check_cache {
+func getSignature(file_info FileInfo, cache_policy *CachePolicy) (string, error) {
+	if cache_policy.ReadFromCache {
 		entry, err := getCachedFileInfo(&file_info)
 
 		if err == nil {
@@ -49,7 +54,7 @@ func getSignature(file_info FileInfo, check_cache bool) (string, error) {
 	digest := sha1.Sum(data)
 	signature := hex.EncodeToString(digest[:])
 
-	if UseCache {
+	if cache_policy.WriteToCache {
 		var entry = CachedEntry{Signature: signature}
 		cacheFileInfo(&file_info, &entry)
 	}
@@ -90,6 +95,14 @@ func groupFileBySizeCallback(path string, info os.FileInfo, err error) error {
 }
 
 func groupBySignature() {
+	var cache_policy CachePolicy
+
+	if UseCache {
+		cache_policy = CachePolicy{ReadFromCache: true, WriteToCache: true}
+	} else {
+		cache_policy = CachePolicy{ReadFromCache: false, WriteToCache: false}
+	}
+
 	for _, listOfFiles := range filesBySize {
 		if listOfFiles.Len() < 2 {
 			continue
@@ -97,7 +110,7 @@ func groupBySignature() {
 
 		for e := listOfFiles.Front(); e != nil; e = e.Next() {
 			if file_info, ok := e.Value.(FileInfo); ok {
-				signature, err := getSignature(file_info, true)
+				signature, err := getSignature(file_info, &cache_policy)
 
 				if err != nil {
 					logger.Error().Msgf("signature error: %e", err)

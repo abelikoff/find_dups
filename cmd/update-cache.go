@@ -13,6 +13,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var FullCacheUpdate bool
+
 // updateCacheCmd represents the update-cache command
 
 var updateCacheCmd = &cobra.Command{
@@ -71,6 +73,7 @@ func init() {
 		Timestamp().
 		Logger()
 
+	updateCacheCmd.PersistentFlags().BoolVarP(&FullCacheUpdate, "full", "f", false, "full update (default: incremental)")
 	updateCacheCmd.Flags().StringVarP(&CacheFile, "cache_file", "", "",
 		"cache file to use (default: ~/.find_dups.cache)")
 

@@ -26,6 +26,7 @@ import (
 
 const ExpirationHours float64 = 24 * 90
 
+var cache_policy CachePolicy
 var num_cache_calls, num_cache_hits, num_cache_mismatches, num_cache_writes, num_inserted int // cache statistics
 
 type CachedEntry struct {
@@ -146,6 +147,12 @@ func updateCache(top_dir string) error {
 		}
 	}
 
+	if FullCacheUpdate {
+		cache_policy = CachePolicy{ReadFromCache: false, WriteToCache: true}
+	} else {
+		cache_policy = CachePolicy{ReadFromCache: true, WriteToCache: true}
+	}
+
 	err := filepath.Walk(top_dir, updateFileInCacheCallback)
 
 	if err != nil {
@@ -171,7 +178,7 @@ func updateFileInCacheCallback(path string, info os.FileInfo, err error) error {
 
 	size := info.Size()
 	file_info := FileInfo{path, size, info.ModTime()}
-	_, err = getSignature(file_info, true)
+	_, err = getSignature(file_info, &cache_policy)
 	num_inserted++
 
 	if err != nil {
