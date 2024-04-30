@@ -8,6 +8,8 @@
     go install github.com/abelikoff/find_dups@latest
 ```
 
+(You might need to install GDBM library - in case of Ubuntu, that would be: `sudo apt install libgdbm-dev`).
+
 ## Usage
 
 ### Basic usage
